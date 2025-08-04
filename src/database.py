@@ -2,11 +2,36 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, Date
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, scoped_session, Session
 from datetime import datetime
+from typing import Generator
+import os
+
+# Database URL configuration
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ecommerce.db")
+
+# Create SQLAlchemy engine
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+
+# Session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Scoped session for thread safety
+SessionScoped = scoped_session(SessionLocal)
 
 # Database setup
 Base = declarative_base()
+Base.query = SessionScoped.query_property()
+
+# Dependency to get DB session
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 class User(Base):
     __tablename__ = 'users'
